@@ -2,7 +2,7 @@ const double PI2 = 6.283185;
 const byte AMP = 127;
 const byte OFFSET = 128;
 
-const int LENGTH = 256;
+const int LENGTH = 64;
 byte sinWave[LENGTH];
 byte squareWave[LENGTH];
 byte sawWave[LENGTH];
@@ -18,11 +18,7 @@ void setup(){
   //set input output modes of pins that write to the DAC
   DDRB = 0B11111111; //set pins 8 to 13 as outputs
   DDRD |= 0B11111100; //set pins 2 to 7 as ouputs
-  //pregenerate wave forms
-  for (int i=0; i<LENGTH; i++) { // Step across wave tables
-   float v = (AMP*sin((PI2/LENGTH)*i)); // Compute value
-   sinWave[i] = int(v+OFFSET); // Store value as integer
-  }
+  buildSinLookup();
   for(int i=0; i<LENGTH/2; i++){
    squareWave[i] = 0; 
   }
@@ -30,7 +26,15 @@ void setup(){
     squareWave[i] = 0xFF;
   }
   //set wave freq and interrupt handler stuff
-  setWaveFreq(1);
+  setWaveFreq(1500);
+}
+
+void buildSinLookup(){
+  //pregenerate wave forms
+  for (int i=0; i<LENGTH; i++) { // Step across wave tables
+   float v = (AMP*sin((PI2/LENGTH)*i)); // Compute value
+   sinWave[i] = reverse(byte(v+OFFSET)); // Store value as integer
+  }
 }
 
 void setTimerOneInterrupt(long interruptFreq){
@@ -59,29 +63,26 @@ void setWaveFreq(long waveFreq){
   setTimerOneInterrupt(interruptFreq);
 }
 
-void writeByte2(byte val){
-  //allen's writeByte function
-  int pin;
-  for (pin=13; pin>=6; pin--) {
-    digitalWrite(pin, val&1);
-    val >>= 1;
-  }
-}
-
 void writeByte(byte val){
   //pins for PORTD 7 6 5 4 3 2 1 0
-  byte portDbyte = (val & 000000011) << 6;
-  
-  // pins for PORTb
+  byte portDbyte = (val & B00000011) << 6;
+  // pins for PORTB
   byte portBbyte = val >> 2;
-  
   PORTD = portDbyte;
   PORTB = portBbyte;
 }
 
+byte reverse(byte inb) {
+   byte b = inb;
+   b = (b & 0xF0) >> 4 | (b & 0x0F) << 4;
+   b = (b & 0xCC) >> 2 | (b & 0x33) << 2;
+   b = (b & 0xAA) >> 1 | (b & 0x55) << 1;
+   return b;
+}
+
 //Called on timer one interrupt
 ISR(TIMER1_COMPA_vect){//timer1 interrupt writes bytes onto D6 to D13
-  writeByte(sinWave[index]);
+  writeByte(sinWave[B00111111 & index]);
   index++;
 }
 

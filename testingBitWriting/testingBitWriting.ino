@@ -18,11 +18,16 @@ void setup(){
   //set input output modes of pins that write to the DAC
   DDRB = 0B11111111; //set pins 8 to 13 as outputs
   DDRD |= 0B11111100; //set pins 2 to 7 as ouputs
+  //pregenerate wave forms
+  for (int i=0; i<LENGTH; i++) { // Step across wave tables
+   float v = (AMP*sin((PI2/LENGTH)*i)); // Compute value
+   sinWave[i] = int(v+OFFSET); // Store value as integer
+  }
 }
 
 void writeByte(byte val){
   //pins for PORTD 7 6 5 4 3 2 1 0
-  byte portDbyte = (val & 000000011) << 6;
+  byte portDbyte = (val & B00000011) << 6;
   
   // pins for PORTB
   byte portBbyte = val >> 2;
@@ -35,9 +40,18 @@ void writeByte(byte val){
   PORTB = portBbyte;
 }
 
+void writeByte2(byte val){
+  //allen's writeByte function
+  int pin;
+  for (pin=13; pin>=6; pin--) {
+    digitalWrite(pin, val&1);
+    val >>= 1;
+  }
+}
+
 
 void loop(){
-  
   // For some reason pin 9 is being written to when b00000010 is written
-  writeByte(00000010);
+  writeByte2(index);
+  index++;
 }
