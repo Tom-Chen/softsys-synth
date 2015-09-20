@@ -2,7 +2,11 @@ const double PI2 = 6.283185;
 const byte AMP = 127;
 const byte OFFSET = 128;
 
-const int LENGTH = 64;
+//bitshift lookup tables
+byte shiftLeftSix[256];
+byte shiftRightTwo[256];
+
+const int LENGTH = 32;
 byte sinWave[LENGTH];
 byte squareWave[LENGTH];
 byte sawWave[LENGTH];
@@ -19,14 +23,9 @@ void setup(){
   DDRB = 0B11111111; //set pins 8 to 13 as outputs
   DDRD |= 0B11111100; //set pins 2 to 7 as ouputs
   buildSinLookup();
-  for(int i=0; i<LENGTH/2; i++){
-   squareWave[i] = 0; 
-  }
-  for(int i=LENGTH/2; i < LENGTH; i++){
-    squareWave[i] = 0xFF;
-  }
+  buildBitShiftTables();
   //set wave freq and interrupt handler stuff
-  setWaveFreq(1500);
+  setWaveFreq(200);
 }
 
 void buildSinLookup(){
@@ -35,6 +34,13 @@ void buildSinLookup(){
    float v = (AMP*sin((PI2/LENGTH)*i)); // Compute value
    sinWave[i] = reverse(byte(v+OFFSET)); // Store value as integer
   }
+}
+
+void buildBitShiftTables(){
+    for(int i = 0; i < 256; i++){
+      shiftLeftSix[i] = i << 6;
+      shiftRightTwo[i] = i >> 2;
+    }
 }
 
 void setTimerOneInterrupt(long interruptFreq){
@@ -65,9 +71,9 @@ void setWaveFreq(long waveFreq){
 
 void writeByte(byte val){
   //pins for PORTD 7 6 5 4 3 2 1 0
-  byte portDbyte = (val & B00000011) << 6;
+  byte portDbyte = shiftLeftSix[val];
   // pins for PORTB
-  byte portBbyte = val >> 2;
+  byte portBbyte = shiftRightTwo[val];
   PORTD = portDbyte;
   PORTB = portBbyte;
 }
@@ -82,7 +88,7 @@ byte reverse(byte inb) {
 
 //Called on timer one interrupt
 ISR(TIMER1_COMPA_vect){//timer1 interrupt writes bytes onto D6 to D13
-  writeByte(sinWave[B00111111 & index]);
+  writeByte(sinWave[B00011111 & index]);
   index++;
 }
 
