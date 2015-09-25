@@ -52,6 +52,6 @@ void writeByte2(byte val){
 
 void loop(){
   // For some reason pin 9 is being written to when b00000010 is written
-  writeByte2(index);
+  writeByte(B00000001);
   index++;
 }

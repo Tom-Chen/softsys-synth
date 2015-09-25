@@ -14,9 +14,6 @@ byte sawWave[LENGTH];
 //index of wave array we want to write next
 byte index = 0;
 
-//for testing w/ square waves. remove later
-boolean high = true;
-
 void setup(){
   Serial.begin(9600);
   //set input output modes of pins that write to the DAC
@@ -25,7 +22,7 @@ void setup(){
   buildSinLookup();
   buildBitShiftTables();
   //set wave freq and interrupt handler stuff
-  setWaveFreq(200);
+  setWaveFreq(5000);
 }
 
 void buildSinLookup(){
@@ -64,21 +61,20 @@ void setTimerOneInterrupt(long interruptFreq){
 } 
 
 void setWaveFreq(long waveFreq){
-  //try unsigned ints?
   long interruptFreq = waveFreq * (long)LENGTH;
   setTimerOneInterrupt(interruptFreq);
 }
 
 void writeByte(byte val){
-  //pins for PORTD 7 6 5 4 3 2 1 0
+  //use lookup tables instead of actual shift operations to save cycles
   byte portDbyte = shiftLeftSix[val];
-  // pins for PORTB
   byte portBbyte = shiftRightTwo[val];
-  PORTD = portDbyte;
   PORTB = portBbyte;
+  PORTD = portDbyte;
 }
 
 byte reverse(byte inb) {
+  //reverse function taken from http://stackoverflow.com/questions/2602823/in-c-c-whats-the-simplest-way-to-reverse-the-order-of-bits-in-a-byte
    byte b = inb;
    b = (b & 0xF0) >> 4 | (b & 0x0F) << 4;
    b = (b & 0xCC) >> 2 | (b & 0x33) << 2;
@@ -88,6 +84,7 @@ byte reverse(byte inb) {
 
 //Called on timer one interrupt
 ISR(TIMER1_COMPA_vect){//timer1 interrupt writes bytes onto D6 to D13
+  //use the bitmask B00011111 to take the index mod32 and quickly index into the array
   writeByte(sinWave[B00011111 & index]);
   index++;
 }
