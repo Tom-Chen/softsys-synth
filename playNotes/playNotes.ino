@@ -7,15 +7,33 @@ byte shiftLeftSix[256];
 byte shiftRightTwo[256];
 
 const int LENGTH = 32;
+const char SIN = 0;
+const char SQUARE = 1;
+const char SAW = 2;
 byte sinWave[LENGTH];
 byte squareWave[LENGTH];
 byte sawWave[LENGTH];
+byte *wave[3];
+byte waveType;
+
 //index of wave array we want to write next
 byte waveIndex = 0;
 
-int notes[] = {400, 440, 880, 1220, 440};
-int duration[] = {400, 500, 600, 200, 400}; // in .01s increments
-int songLen = 5;
+//define notes
+const short C = 2093;
+const short D = 2349;
+const short E = 2637;
+const short F = 2793;
+const short G = 3135;
+const short A = 3520;
+const short B = 3951;
+const short HIGHC = 4186;
+
+//first note in notes and duration array is a sentinel value that is not actually played
+//song will loop once it reaches the end of the array
+short notes[] = {0,C,D,E,F,G,A,B,HIGHC};
+int duration[] = {0,100,100,100,100,100,100,100,100}; // in .01s increments
+int songLen = sizeof(notes)/sizeof(short);
 int songIndex = 0;
 int noteDuration = 0;
 
@@ -25,6 +43,12 @@ void setup(){
   DDRB = 0B11111111; //set pins 8 to 13 as outputs
   DDRD |= 0B11111100; //set pins 2 to 7 as ouputs
   buildSinLookup();
+  buildSquareLookup();
+  buildSawLookup();
+  wave[SIN] = sinWave;
+  wave[SQUARE] = squareWave;
+  wave[SAW] = sawWave;
+  waveType = SIN;
   buildBitShiftTables();
   //set wave freq and interrupt handler stuff
   //turn off interrupts
@@ -37,10 +61,25 @@ void setup(){
 }
 
 void buildSinLookup(){
-  //pregenerate wave forms
   for (int i=0; i<LENGTH; i++) { // Step across wave tables
    float v = (AMP*sin((PI2/LENGTH)*i)); // Compute value
    sinWave[i] = reverse(byte(v+OFFSET)); // Store value as integer
+  }
+}
+
+void buildSquareLookup(){
+  for (int i=0; i<LENGTH/2; i++) {
+   squareWave[i] = reverse(byte(255)); // First half of square wave is high
+  }
+  for (int i=LENGTH/2; i<LENGTH; i++) {
+   squareWave[i] = reverse(byte(0)); // Second half is low
+  }
+}
+
+void buildSawLookup(){
+  for (int i=0; i<LENGTH; i++) {
+   float v = 255 * i * 1.0 / LENGTH;
+   sawWave[i] = reverse(byte(v));
   }
 }
 
@@ -113,30 +152,22 @@ byte reverse(byte inb) {
 //Timer one writes out waves to DAC
 ISR(TIMER1_COMPA_vect){//timer1 interrupt writes bytes onto D6 to D13
   //use the bitmask B00011111 to take the index mod32 and quickly index into the array
-  writeByte(sinWave[B00011111 & waveIndex]);
+  writeByte(wave[waveType][B00011111 & waveIndex]);
   waveIndex++;
 }
 
-////100 Hz timer two interrupt changes frequencies
-//TESTISR(TIMER2_COMPA_vect){
-//  noteDuration++;
-//  if(noteDuration > duration[songIndex] && songIndex < songLen){
-//    //go to the next note
-//    noteDuration = 0;
-//    songIndex++;
-//    setTimerOneInterrupt(waveFreqToCompareReg(notes[songIndex]));
-//  }
-//}
-
 //100 Hz timer two interrupt changes frequencies
 ISR(TIMER2_COMPA_vect){
+  if(songIndex >= songLen){
+   songIndex = 0; 
+  }
   noteDuration++;
-  if(noteDuration > duration[songIndex] && songIndex < songLen){
+  if(noteDuration > duration[songIndex]){
     //go to the next note
     noteDuration = 0;
     songIndex++;
+    setTimerOneInterrupt(waveFreqToCompareReg(notes[songIndex]));
   }
-  setTimerOneInterrupt(waveFreqToCompareReg(notes[songIndex]));
 }
 
 void loop(){
