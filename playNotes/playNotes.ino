@@ -19,10 +19,20 @@ byte waveType;
 //index of wave array we want to write next
 byte waveIndex = 0;
 
+//define notes
+const short C = 261;
+const short D = 294;
+const short E = 329;
+const short F = 349;
+const short G = 392;
+const short A = 440;
+const short B = 493;
+const short HIGHC = 523;
+
 //first note in notes and duration array is a sentinel value that is not actually played
-//last note will be played forever
-short notes[] = {0,200};
-int duration[] = {0,100}; // in .01s increments
+//song will loop once it reaches the end of the array
+short notes[] = {0,C,D,E,F,G,A,B,HIGHC};
+int duration[] = {0,100,100,100,100,100,100,100,100}; // in .01s increments
 int songLen = sizeof(notes)/sizeof(short);
 int songIndex = 0;
 int noteDuration = 0;
@@ -148,8 +158,11 @@ ISR(TIMER1_COMPA_vect){//timer1 interrupt writes bytes onto D6 to D13
 
 //100 Hz timer two interrupt changes frequencies
 ISR(TIMER2_COMPA_vect){
+  if(songIndex >= songLen){
+   songIndex = 0; 
+  }
   noteDuration++;
-  if(noteDuration > duration[songIndex] && songIndex < songLen - 1){
+  if(noteDuration > duration[songIndex]){
     //go to the next note
     noteDuration = 0;
     songIndex++;
