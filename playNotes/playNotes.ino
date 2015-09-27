@@ -20,14 +20,14 @@ byte waveType;
 byte waveIndex = 0;
 
 //define notes
-const short C = 261;
-const short D = 294;
-const short E = 329;
-const short F = 349;
-const short G = 392;
-const short A = 440;
-const short B = 493;
-const short HIGHC = 523;
+const short C = 2093;
+const short D = 2349;
+const short E = 2637;
+const short F = 2793;
+const short G = 3135;
+const short A = 3520;
+const short B = 3951;
+const short HIGHC = 4186;
 
 //first note in notes and duration array is a sentinel value that is not actually played
 //song will loop once it reaches the end of the array
