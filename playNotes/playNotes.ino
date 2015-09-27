@@ -13,8 +13,8 @@ byte sawWave[LENGTH];
 //index of wave array we want to write next
 byte waveIndex = 0;
 
-int notes[] = {400, 440, 880, 1220, 200};
-int duration[] = {0, 500, 600, 200, 100};
+int notes[] = {400, 440, 880, 1220, 440};
+int duration[] = {400, 500, 600, 200, 400}; // in .01s increments
 int songLen = 5;
 int songIndex = 0;
 int noteDuration = 0;
@@ -117,6 +117,17 @@ ISR(TIMER1_COMPA_vect){//timer1 interrupt writes bytes onto D6 to D13
   waveIndex++;
 }
 
+////100 Hz timer two interrupt changes frequencies
+//TESTISR(TIMER2_COMPA_vect){
+//  noteDuration++;
+//  if(noteDuration > duration[songIndex] && songIndex < songLen){
+//    //go to the next note
+//    noteDuration = 0;
+//    songIndex++;
+//    setTimerOneInterrupt(waveFreqToCompareReg(notes[songIndex]));
+//  }
+//}
+
 //100 Hz timer two interrupt changes frequencies
 ISR(TIMER2_COMPA_vect){
   noteDuration++;
@@ -124,8 +135,8 @@ ISR(TIMER2_COMPA_vect){
     //go to the next note
     noteDuration = 0;
     songIndex++;
-    setTimerOneInterrupt(waveFreqToCompareReg(notes[songIndex]));
   }
+  setTimerOneInterrupt(waveFreqToCompareReg(notes[songIndex]));
 }
 
 void loop(){
