@@ -10,11 +10,17 @@ const int LENGTH = 32;
 const char SIN = 0;
 const char SQUARE = 1;
 const char SAW = 2;
+
+const byte ledPin = 5;
+const byte buttonPin1 = 2;
+const byte buttonPin2 = 3;
+
 byte sinWave[LENGTH];
 byte squareWave[LENGTH];
 byte sawWave[LENGTH];
 byte *wave[3];
 byte waveType;
+
 
 //index of wave array we want to write next
 byte waveIndex = 0;
@@ -31,17 +37,25 @@ const short HIGHC = 4186;
 
 //first note in notes and duration array is a sentinel value that is not actually played
 //song will loop once it reaches the end of the array
-short notes[] = {0,C,D,E,F,G,A,B,HIGHC};
+//short notes[] = {0,C,D,E,F,G,A,B,HIGHC};
+short notes[] = {0, 100, 200, 300, 400, 500, 600, 700, 800};
 int duration[] = {0,100,100,100,100,100,100,100,100}; // in .01s increments
 int songLen = sizeof(notes)/sizeof(short);
 int songIndex = 0;
 int noteDuration = 0;
 
 void setup(){
-  Serial.begin(9600);
+  Serial.begin(300);
+  
   //set input output modes of pins that write to the DAC
   DDRB = 0B11111111; //set pins 8 to 13 as outputs
-  DDRD |= 0B11111100; //set pins 2 to 7 as ouputs
+  DDRD |= 0B11110000; //set pins 4 to 7 as ouputs
+
+  // LED Pin is already set to output as pin 5
+
+  pinMode(buttonPin1, INPUT_PULLUP);
+  pinMode(buttonPin2, INPUT_PULLUP);
+  
   buildSinLookup();
   buildSquareLookup();
   buildSawLookup();
@@ -55,6 +69,7 @@ void setup(){
   cli();
   initializeTimerTwoInterrupt();
   initializeTimerOneInterrupt();
+  initializeTimerZeroInterrupt();
   setTimerOneInterrupt(waveFreqToCompareReg(3000));
   //enable interrupts
   sei();
@@ -119,7 +134,23 @@ void initializeTimerOneInterrupt(){
   TCCR1B |= (1 << CS10);  
   // enable timer compare interrupt
   TIMSK1 |= (1 << OCIE1A);
-} 
+}
+
+void initializeTimerZeroInterrupt() {
+  TCCR0A = 0;
+  TCCR0B = 0;
+  TCNT0 = 0;
+
+  // set compare register for 1 kHz increments
+  OCR0A = (16000000L) / (100*64) - 1; // (must be <256)
+
+  // turn on CTC mode
+  TCCR0A |= (1 << WGM01);
+  // Set CS01 and CS00 bits for 64 prescaler
+  TCCR0B |= (1 << CS01) | (1 << CS00);   
+  // enable timer compare interrupt
+  TIMSK0 |= (1 << OCIE0A);
+}
 
 void setTimerOneInterrupt(short compareReg){
   //Set compare register
@@ -132,11 +163,26 @@ short waveFreqToCompareReg(long waveFreq){
   return compareReg;
 }
 
+/*
 void writeByte(byte val){
   //use lookup tables instead of actual shift operations to save cycles
   byte portDbyte = shiftLeftSix[val];
   byte portBbyte = shiftRightTwo[val];
   PORTD = portDbyte;
+  PORTB = portBbyte;
+}
+*/
+
+void writeByte(byte val){
+  /* TODO
+   * Bitwise AND with some variable for setting bit 5 (the LED pin)
+   * that variable can be accessed in a global scope and used by the other function
+   */
+  byte portDbyte = shiftLeftSix[val];
+  byte portBbyte = shiftRightTwo[val];
+  //PORTD |= 0B00001111;
+  PORTD = portDbyte | 0B00100000;
+  // PORTD |= 
   PORTB = portBbyte;
 }
 
@@ -147,6 +193,10 @@ byte reverse(byte inb) {
    b = (b & 0xCC) >> 2 | (b & 0x33) << 2;
    b = (b & 0xAA) >> 1 | (b & 0x55) << 1;
    return b;
+}
+
+ISR(TIMER0_COMPA_vect) {
+  //Serial.println(digitalRead(buttonPin1));
 }
 
 //Timer one writes out waves to DAC
