@@ -47,6 +47,9 @@ int songLen = sizeof(notes)/sizeof(short);
 int songIndex = 0;
 int noteDuration = 0;
 
+const long DEBOUNCE_TIME = 3000;
+long buttonPressedTime = 0;
+
 void setup(){
   Serial.begin(9600);
 
@@ -145,11 +148,8 @@ void initializeTimerZeroInterrupt() {
   TCCR0A = 0;
   TCCR0B = 0;
   TCNT0 = 0;
-
   // set compare register for 1 kHz increments
   OCR0A = (16000000L) / (1000*64) - 1; // (must be <256)
-  
-
   // turn on CTC mode
   TCCR0A |= (1 << WGM01);
   // Set CS01 and CS00 bits for 64 prescaler
@@ -200,11 +200,29 @@ byte reverse(byte inb) {
    return b;
 }
 
+void changeWaveType(){
+  switch(waveType){
+    case SIN:
+      waveType = SAW;
+      break;
+    case SAW:
+      waveType = SQUARE;
+      break;
+    case SQUARE:
+      waveType = SIN;
+      break;
+  }
+}
+
 ISR(TIMER0_COMPA_vect) {
   if (digitalRead(A0)) {
-    waveType = SAW;
+    buttonPressedTime++;
+    if (buttonPressedTime >= DEBOUNCE_TIME){
+      changeWaveType();
+      buttonPressedTime = 0;
+    }    
   } else {
-    waveType = SIN;
+    buttonPressedTime = 0;
   }
 }
 
