@@ -14,6 +14,9 @@ const char SAW = 2;
 const byte ledPin = 5;
 const byte buttonPin1 = 2;
 const byte buttonPin2 = 3;
+const byte inputButton1 = 0;
+
+byte button1Press; // 0 for LOW and 0B00100000 for HIGH
 
 byte sinWave[LENGTH];
 byte squareWave[LENGTH];
@@ -45,7 +48,9 @@ int songIndex = 0;
 int noteDuration = 0;
 
 void setup(){
-  Serial.begin(300);
+  Serial.begin(9600);
+
+  button1Press = 1;
   
   //set input output modes of pins that write to the DAC
   DDRB = 0B11111111; //set pins 8 to 13 as outputs
@@ -142,7 +147,8 @@ void initializeTimerZeroInterrupt() {
   TCNT0 = 0;
 
   // set compare register for 1 kHz increments
-  OCR0A = (16000000L) / (100*64) - 1; // (must be <256)
+  OCR0A = (16000000L) / (1000*64) - 1; // (must be <256)
+  
 
   // turn on CTC mode
   TCCR0A |= (1 << WGM01);
@@ -180,9 +186,8 @@ void writeByte(byte val){
    */
   byte portDbyte = shiftLeftSix[val];
   byte portBbyte = shiftRightTwo[val];
-  //PORTD |= 0B00001111;
-  PORTD = portDbyte | 0B00100000;
-  // PORTD |= 
+  PORTD = portDbyte;
+  //PORTD = portDbyte | button1Press;
   PORTB = portBbyte;
 }
 
@@ -196,7 +201,11 @@ byte reverse(byte inb) {
 }
 
 ISR(TIMER0_COMPA_vect) {
-  //Serial.println(digitalRead(buttonPin1));
+  if (digitalRead(A0)) {
+    waveType = SAW;
+  } else {
+    waveType = SIN;
+  }
 }
 
 //Timer one writes out waves to DAC
