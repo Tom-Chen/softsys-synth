@@ -10,6 +10,7 @@ const int LENGTH = 32;
 const char SIN = 0;
 const char SQUARE = 1;
 const char SAW = 2;
+const char PAUSE = 3;
 
 const byte ledPin = 5;
 const byte buttonPin1 = 2;
@@ -21,12 +22,16 @@ byte button1Press; // 0 for LOW and 0B00100000 for HIGH
 byte sinWave[LENGTH];
 byte squareWave[LENGTH];
 byte sawWave[LENGTH];
-byte *wave[3];
+byte pauseWave[LENGTH] = {0};
+byte *wave[4];
 byte waveType;
-
 
 //index of wave array we want to write next
 byte waveIndex = 0;
+
+// temporary waveIndex and waveType for pausing
+byte tempWaveIndex = 0;
+byte tempWaveType = PAUSE;
 
 //define notes
 const short C = 2093;
@@ -41,11 +46,15 @@ const short HIGHC = 4186;
 //first note in notes and duration array is a sentinel value that is not actually played
 //song will loop once it reaches the end of the array
 //short notes[] = {0,C,D,E,F,G,A,B,HIGHC};
-short notes[] = {0, 100, 200, 300, 400, 500, 600, 700, 800};
-int duration[] = {0,100,100,100,100,100,100,100,100}; // in .01s increments
+short notes[] = {0, 200, 400, 800, 1600, 800, 400, 200, 100};
+int duration[] = {0,1000,1000,1000,1000,1000,1000,1000,1000}; // in .01s increments
 int songLen = sizeof(notes)/sizeof(short);
 int songIndex = 0;
 int noteDuration = 0;
+
+const long DEBOUNCE_TIME = 3000;
+long button0PressedTime = 0;
+long button1PressedTime = 0;
 
 void setup(){
   Serial.begin(9600);
@@ -67,6 +76,7 @@ void setup(){
   wave[SIN] = sinWave;
   wave[SQUARE] = squareWave;
   wave[SAW] = sawWave;
+  wave[PAUSE] = pauseWave;
   waveType = SIN;
   buildBitShiftTables();
   //set wave freq and interrupt handler stuff
@@ -145,11 +155,8 @@ void initializeTimerZeroInterrupt() {
   TCCR0A = 0;
   TCCR0B = 0;
   TCNT0 = 0;
-
   // set compare register for 1 kHz increments
   OCR0A = (16000000L) / (1000*64) - 1; // (must be <256)
-  
-
   // turn on CTC mode
   TCCR0A |= (1 << WGM01);
   // Set CS01 and CS00 bits for 64 prescaler
@@ -200,12 +207,59 @@ byte reverse(byte inb) {
    return b;
 }
 
-ISR(TIMER0_COMPA_vect) {
-  if (digitalRead(A0)) {
-    waveType = SAW;
-  } else {
-    waveType = SIN;
+void changeWaveType(){
+  switch(waveType){
+    case SIN:
+      waveType = SAW;
+      break;
+    case SAW:
+      waveType = SQUARE;
+      break;
+    case SQUARE:
+      waveType = SIN;
+      break;
   }
+}
+
+void togglePause(){
+  if (waveType == PAUSE) {
+    waveType = tempWaveType;
+    waveIndex = tempWaveIndex;
+  }
+  else {
+    tempWaveType = waveType;
+    tempWaveIndex = waveIndex;
+    waveType = PAUSE;
+  }
+}
+
+void checkPauseButton(){
+  if (digitalRead(A0)) {
+    button0PressedTime++;
+    if (button0PressedTime >= DEBOUNCE_TIME){
+      togglePause();
+      button0PressedTime = 0;
+    }    
+  } else {
+    button0PressedTime = 0;
+  }
+}
+
+void checkWaveChangeButton(){
+    if (digitalRead(A1)) {
+    button1PressedTime++;
+    if (button1PressedTime >= DEBOUNCE_TIME){
+      changeWaveType();
+      button1PressedTime = 0;
+    }    
+  } else {
+    button1PressedTime = 0;
+  }
+}
+
+ISR(TIMER0_COMPA_vect) {
+  checkPauseButton();
+  checkWaveChangeButton();
 }
 
 //Timer one writes out waves to DAC
