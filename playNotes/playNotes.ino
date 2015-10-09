@@ -7,22 +7,18 @@ byte shiftLeftSix[256];
 byte shiftRightTwo[256];
 
 const int LENGTH = 32;
-const char SIN = 0;
-const char SQUARE = 1;
-const char SAW = 2;
-const char PAUSE = 3;
+const byte SIN = 0;
+const byte SQUARE = 1;
+const byte SAW = 2;
+const byte PAUSE = 3;
 
 const byte ledPin = 5;
-const byte buttonPin1 = 2;
-const byte buttonPin2 = 3;
 const byte inputButton1 = 0;
-
-byte button1Press; // 0 for LOW and 0B00100000 for HIGH
 
 byte sinWave[LENGTH];
 byte squareWave[LENGTH];
 byte sawWave[LENGTH];
-byte pauseWave[LENGTH] = {0};
+byte pauseWave[LENGTH];
 byte *wave[4];
 byte waveType;
 
@@ -45,31 +41,24 @@ const short HIGHC = 4186;
 
 //first note in notes and duration array is a sentinel value that is not actually played
 //song will loop once it reaches the end of the array
-//short notes[] = {0,C,D,E,F,G,A,B,HIGHC};
-short notes[] = {0, 200, 400, 800, 1600, 800, 400, 200, 100};
-int duration[] = {0,1000,1000,1000,1000,1000,1000,1000,1000}; // in .01s increments
+short notes[] = {0,C,D,E,F,G,A,B,HIGHC};
+int duration[] = {0,100,100,100,100,100,100,100,100}; // in .01s increments
 int songLen = sizeof(notes)/sizeof(short);
 int songIndex = 0;
 int noteDuration = 0;
 
-const long DEBOUNCE_TIME = 3000;
+const long DEBOUNCE_TIME = 6000;
 long button0PressedTime = 0;
 long button1PressedTime = 0;
 
 void setup(){
   Serial.begin(9600);
 
-  button1Press = 1;
-  
   //set input output modes of pins that write to the DAC
   DDRB = 0B11111111; //set pins 8 to 13 as outputs
   DDRD |= 0B11110000; //set pins 4 to 7 as ouputs
 
   // LED Pin is already set to output as pin 5
-
-  pinMode(buttonPin1, INPUT_PULLUP);
-  pinMode(buttonPin2, INPUT_PULLUP);
-  
   buildSinLookup();
   buildSquareLookup();
   buildSawLookup();
@@ -176,25 +165,10 @@ short waveFreqToCompareReg(long waveFreq){
   return compareReg;
 }
 
-/*
 void writeByte(byte val){
-  //use lookup tables instead of actual shift operations to save cycles
   byte portDbyte = shiftLeftSix[val];
   byte portBbyte = shiftRightTwo[val];
   PORTD = portDbyte;
-  PORTB = portBbyte;
-}
-*/
-
-void writeByte(byte val){
-  /* TODO
-   * Bitwise AND with some variable for setting bit 5 (the LED pin)
-   * that variable can be accessed in a global scope and used by the other function
-   */
-  byte portDbyte = shiftLeftSix[val];
-  byte portBbyte = shiftRightTwo[val];
-  PORTD = portDbyte;
-  //PORTD = portDbyte | button1Press;
   PORTB = portBbyte;
 }
 
@@ -209,6 +183,8 @@ byte reverse(byte inb) {
 
 void changeWaveType(){
   switch(waveType){
+    case PAUSE:
+      break;
     case SIN:
       waveType = SAW;
       break;
@@ -246,11 +222,13 @@ void checkPauseButton(){
 }
 
 void checkWaveChangeButton(){
-    if (digitalRead(A1)) {
+  if (digitalRead(A1)) {
     button1PressedTime++;
     if (button1PressedTime >= DEBOUNCE_TIME){
-      changeWaveType();
-      button1PressedTime = 0;
+      if(waveType != PAUSE){
+        changeWaveType();
+        button1PressedTime = 0;
+      }    
     }    
   } else {
     button1PressedTime = 0;
