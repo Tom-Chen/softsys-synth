@@ -48,7 +48,7 @@ int songLen = sizeof(notes)/sizeof(short);
 int songIndex = 0;
 int noteDuration = 0;
 
-const long DEBOUNCE_TIME = 150;
+const long DEBOUNCE_TIME = 500;
 long button0PressedTime = 0;
 long button1PressedTime = 0;
 
