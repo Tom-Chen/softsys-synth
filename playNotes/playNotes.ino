@@ -51,16 +51,8 @@ const short B_7 = 3951;
 
 const short HIGHC = 4186;
 
-//first note in notes and duration array is a sentinel value that is not actually played
-//song will loop once it reaches the end of the array
-//short notes[] = {0, C, D, E, F, G, A, B, HIGHC};
-
 // Fur Elise notes
 short notes[] = {E_7, D_7s, E_7, D_7s, E_7, B_6, D_7, C_7, A_6, 0, C_6, E_6, A_6, B_6, 0, E_6, G_6s, B_6, C_7, 0, E_6, E_7, D_7s, E_7, D_7s, E_7, B_6, D_7, C_7, A_6, 0, C_6, E_6, A_6, B_6, 0, E_6, C_7, B_6, A_6};
-
-//short notes[] = {0,C/6,D/6,E/6,F/6,G/6,A/6,B/6,HIGHC/6};
-
-//int duration[] = {0, 100, 100, 100, 100, 100, 100, 100, 100}; // in .01s increments
 
 // Fur Elise rhythm (NOTE: multiplied later in set up for right timing)
 int duration[] = {1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 2, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 2, 1, 1, 1, 1, 4};
@@ -69,9 +61,9 @@ int songLen = sizeof(notes) / sizeof(short);
 int songIndex = 0;
 int noteDuration = 0;
 
-const long DEBOUNCE_TIME = 150;
-long button0PressedTime = 0;
-long button1PressedTime = 0;
+const long DEBOUNCE_TIME = 400;
+long pauseButtonLastPressed = 0;
+long waveButtonLastPressed = 0;
 
 void setup() {
   Serial.begin(9600);
@@ -148,7 +140,7 @@ void initializeTimerTwoInterrupt() {
   // Set CS10 and CS12 bits for 1024 prescaler
   TCCR2B |= (1 << CS12) | (1 << CS10);
   // enable timer compare interrupt
-  TIMSK2 |= (1 << OCIE1A);
+  TIMSK2 |= (1 << OCIE2A);
 }
 
 
@@ -178,7 +170,7 @@ void initializeTimerZeroInterrupt() {
   // Set CS10 and CS12 bits for 1024 prescaler
   TCCR0B |= (1 << CS12) | (1 << CS10);
   // enable timer compare interrupt
-  TIMSK0 |= (1 << OCIE1A);
+  TIMSK0 |= (1 << OCIE0A);
 }
 
 void setTimerOneInterrupt(short compareReg) {
@@ -237,29 +229,23 @@ void togglePause() {
 }
 
 void checkPauseButton() {
-  if (digitalRead(A0)) {
-    button0PressedTime++;
-    if (button0PressedTime >= DEBOUNCE_TIME) {
-      togglePause();
-      button0PressedTime = 0;
-    }
-  } else {
-    button0PressedTime = 0;
-  }
+   if(digitalRead(A0)){
+      long timePressed = millis();
+      if(timePressed - pauseButtonLastPressed > 500){
+        togglePause();
+        pauseButtonLastPressed = timePressed;
+      }
+   } 
 }
 
 void checkWaveChangeButton() {
-  if (digitalRead(A1)) {
-    button1PressedTime++;
-    if (button1PressedTime >= DEBOUNCE_TIME) {
-      if (waveType != PAUSE) {
+   if(digitalRead(A1)){
+      long timePressed = millis();
+      if(timePressed - waveButtonLastPressed > 500){
         changeWaveType();
-        button1PressedTime = 0;
+        waveButtonLastPressed = timePressed;
       }
-    }
-  } else {
-    button1PressedTime = 0;
-  }
+   } 
 }
 
 //Timer one checks button presses
