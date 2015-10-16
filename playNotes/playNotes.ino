@@ -52,16 +52,16 @@ const short B_7 = 3951;
 const short HIGHC = 4186;
 
 // Fur Elise notes
-short notes[] = {E_7, D_7s, E_7, D_7s, E_7, B_6, D_7, C_7, A_6, 0, C_6, E_6, A_6, B_6, 0, E_6, G_6s, B_6, C_7, 0, E_6, E_7, D_7s, E_7, D_7s, E_7, B_6, D_7, C_7, A_6, 0, C_6, E_6, A_6, B_6, 0, E_6, C_7, B_6, A_6};
+short notes[] = {E_7, D_7s, E_7, D_7s, E_7, B_6, D_7, C_7, A_6, 0, C_6, E_6, A_6, B_6, 0, E_6, G_6s, B_6, C_7, 0, E_6, E_7, D_7s, E_7, D_7s, E_7, B_6, D_7, C_7, A_6, 0, C_6, E_6, A_6, B_6, 0, E_6, C_7, B_6, A_6, 0, A_6, B_6, C_7, D_7, E_7, 0, G_6, F_7, E_7, D_7, 0, F_6, E_7, D_7, C_7, 0, E_6, D_7, C_7, B_6, 0, E_6};
 
 // Fur Elise rhythm (NOTE: multiplied later in set up for right timing)
-int duration[] = {1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 2, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 2, 1, 1, 1, 1, 4};
+int duration[] = {1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 2, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 2, 1, 1, 1, 1, 4, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 2, 1, 1, 1, 1, 2, 1, 1, 1, 1, 2, 1, 1};
 
 int songLen = sizeof(notes) / sizeof(short);
 int songIndex = 0;
 int noteDuration = 0;
 
-const long DEBOUNCE_TIME = 400;
+const long DEBOUNCE_TIME = 500;
 long pauseButtonLastPressed = 0;
 long waveButtonLastPressed = 0;
 
@@ -231,7 +231,7 @@ void togglePause() {
 void checkPauseButton() {
    if(digitalRead(A0)){
       long timePressed = millis();
-      if(timePressed - pauseButtonLastPressed > 500){
+      if(timePressed - pauseButtonLastPressed > DEBOUNCE_TIME){
         togglePause();
         pauseButtonLastPressed = timePressed;
       }
@@ -241,7 +241,7 @@ void checkPauseButton() {
 void checkWaveChangeButton() {
    if(digitalRead(A1)){
       long timePressed = millis();
-      if(timePressed - waveButtonLastPressed > 500){
+      if(timePressed - waveButtonLastPressed > DEBOUNCE_TIME){
         changeWaveType();
         waveButtonLastPressed = timePressed;
       }
